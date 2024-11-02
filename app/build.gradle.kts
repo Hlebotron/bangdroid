@@ -59,7 +59,11 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
-    implementation("io.ktor:ktor-client-android:1.5.0")
+    implementation("androidx.compose.material:material-icons-extended")
+    implementation("io.ktor:ktor-client-android:3.0.0")
+    //implementation("io.ktor:ktor-client-core")
+    //implementation("io.ktor:ktor-client-cio")
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
