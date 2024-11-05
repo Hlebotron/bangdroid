@@ -1,5 +1,6 @@
 package com.sasha.kablam
 
+import android.content.res.Configuration
 import android.os.Bundle
 import android.view.inputmethod.InputConnection
 import androidx.activity.ComponentActivity
@@ -25,8 +26,14 @@ import io.ktor.client.statement.*
 //import io.ktor.client.statement.bodyAsText
 import android.os.Build
 import androidx.annotation.RequiresExtension
+import androidx.compose.animation.core.EaseInOut
+import androidx.compose.animation.core.TweenSpec
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
@@ -38,6 +45,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
 import com.sasha.myapplication.ui.theme.BaseTheme
 import io.ktor.client.statement.HttpResponse
 import io.ktor.http.URLProtocol
@@ -63,6 +71,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun Content(modifier: Modifier = Modifier) {
     val snackbarHostState = remember { SnackbarHostState() }
+    val config = LocalConfiguration.current
     Scaffold(
     	snackbarHost = {
 		SnackbarHost(hostState = snackbarHostState)
@@ -72,28 +81,81 @@ fun Content(modifier: Modifier = Modifier) {
 	val modifier = Modifier.padding(innerPadding)
 	val scope = rememberCoroutineScope()
 	var name = rememberSaveable { mutableStateOf<String?>(null) }
-	Column(modifier = modifier, verticalArrangement = Arrangement.Center) {
-	    val innerModifier = Modifier.align(Alignment.CenterHorizontally)
+	val innerModifier = Modifier//.align(Alignment.CenterHorizontally)
+	/*OrientationMatch(config = config) {
+		Title(innerModifier)
+		Column(modifier = modifier, verticalArrangement = Arrangement.Center) {
+			if (name.value != null) {
+				ServerInfo(name, snackbarHostState, modifier = innerModifier)
+			} else {
+				Registration(name, modifier = innerModifier)
+			}
+		}
+	}*/
+	/*val spinningTransition = rememberInfiniteTransition(label = "spinningTransition")
+	val degree by spinningTransition.animateFloat(
+		initialValue = 0f,
+		targetValue = 360f,
+		animationSpec = infiniteRepeatable(TweenSpec(500, easing = EaseInOut)),
+		label = "spinningTransition"
+	)*/
+	if (config.orientation == Configuration.ORIENTATION_PORTRAIT) {
+		Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.Center) {
+		    //val innerModifier = Modifier.align(Alignment.CenterHorizontally)
+		    Title(innerModifier, true)
+		    Column(modifier = modifier.fillMaxWidth().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.Center) {
+			if (name.value != null) {
+				ServerInfo(name, snackbarHostState, modifier = innerModifier)
+			} else {
+				Registration(name, modifier = innerModifier)
+			}
+		    }
+		}
+	} else {
+		Row(modifier = modifier.fillMaxHeight(), horizontalArrangement = Arrangement.Center) {
+		    //val innerModifier = Modifier.align(Alignment.CenterHorizontally)
+		    Title(innerModifier, false)
+		    Column(modifier = modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.Center) {
+			if (name.value != null) {
+				ServerInfo(name, snackbarHostState, modifier = innerModifier)
+			} else {
+				Registration(name, modifier = innerModifier)
+			}
+		    }
+		}
+	}
+    }
+}
+@Composable
+fun Title(modifier: Modifier = Modifier, portrait: Boolean = true) {
+	val mod = if (portrait) {
+		modifier.fillMaxWidth()
+	} else {
+		modifier.fillMaxHeight()
+	}
+	Column(modifier = mod) {
 	    Image(
 		    painter = painterResource(R.drawable.revolver),
 		    contentDescription = null,
-		    modifier = Modifier.fillMaxWidth()
+		    modifier = Modifier.align(Alignment.CenterHorizontally)
 	    )
-    	    Text(
-	    	text = "KABLAM!",
-	    	modifier = innerModifier.paddingFromBaseline(bottom = 25.sp),
-	    	fontSize = 50.sp,
-	    	textAlign = TextAlign.Center
+	    Text(
+		text = "KABLAM!",
+		modifier = modifier.paddingFromBaseline(bottom = 25.sp).align(Alignment.CenterHorizontally),
+		fontSize = 50.sp,
+		textAlign = TextAlign.Center
 	    )
+	}
+}
+@Composable
+fun Logins(name: MutableState<String?> = mutableStateOf(null), snackbarHostState: SnackbarHostState, modifier: Modifier = Modifier) {
 	    Column(modifier = modifier, verticalArrangement = Arrangement.Center) {
 		if (name.value != null) {
-			Credentials(name, snackbarHostState, modifier = innerModifier)
+			ServerInfo(name, snackbarHostState, modifier = modifier)
 		} else {
-			Registration(name, modifier = innerModifier)
+			Registration(name, modifier = modifier)
 		}
 	    }
-	}
-    }
 }
 
 @Preview(showBackground = true)
@@ -113,8 +175,8 @@ class FieldState(var defaultMessage: String) {
 fun Registration(name: MutableState<String?>, modifier: Modifier = Modifier) {
 	Column(verticalArrangement = Arrangement.Center, modifier = modifier.fillMaxWidth()) {
 		var state = remember { FieldState("") }
-		Text(text = "Please enter your name", modifier = modifier)
-		Field("Name", state = state, modifier = modifier)
+		Text(text = "Please enter your name", modifier = modifier.align(Alignment.CenterHorizontally))
+		Field("Name", state = state, modifier = modifier.align(Alignment.CenterHorizontally))
 		Button(
 			onClick = { 
 				name.value = state.text
@@ -127,21 +189,21 @@ fun Registration(name: MutableState<String?>, modifier: Modifier = Modifier) {
 				Text(content)
 			},
 			enabled = !state.error && (state.text != ""),
-			modifier = modifier
+			modifier = modifier.align(Alignment.CenterHorizontally)
 		)
 	}
 }
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun Credentials(nameInput: MutableState<String?>, snackbarHostState: SnackbarHostState, modifier: Modifier = Modifier) {
+fun ServerInfo(nameInput: MutableState<String?>, snackbarHostState: SnackbarHostState, modifier: Modifier = Modifier) {
 	val name = nameInput.value
 	Column(verticalArrangement = Arrangement.Center, modifier = modifier.fillMaxWidth()) {
-		var state: FieldState = remember { FieldState("NOTE: The server accepts only HTTP requests") }
+		var state: FieldState = remember { FieldState("") }
 		val scope = rememberCoroutineScope()
 		var dropdownProtocol by remember { mutableStateOf(URLProtocol.HTTP) }
 		Text(
 			text = "Welcome, $name!",
-			modifier = modifier.paddingFromBaseline(bottom = 10.sp),
+			modifier = modifier.paddingFromBaseline(bottom = 10.sp).align(Alignment.CenterHorizontally),
 			fontSize = 25.sp,
 			textAlign = TextAlign.Center
 		)
@@ -150,7 +212,7 @@ fun Credentials(nameInput: MutableState<String?>, snackbarHostState: SnackbarHos
 			content = { Text("Change Name") },
 			modifier = Modifier.align(Alignment.CenterHorizontally).paddingFromBaseline(bottom = 100.sp)
 		)
-		Row {
+		Row(horizontalArrangement = Arrangement.Center, modifier = modifier.fillMaxWidth()) {
 			var expanded by remember { mutableStateOf(false) }
 			var dropdownText by remember { mutableStateOf("HTTP") }
 			/*var scrollState = rememberScrollState()
@@ -229,8 +291,9 @@ fun Credentials(nameInput: MutableState<String?>, snackbarHostState: SnackbarHos
 					},
 					readOnly = true,
 					modifier = Modifier
-						.width(150.dp)
-						.padding(end = 10.dp, bottom = 5.dp),
+						.width(130.dp)
+						.padding(end = 10.dp, bottom = 5.dp, top = 8.dp),
+					supportingText = { Text("NOTE: The server currently supports only HTTP") }
 				)
 				DropdownMenu (
 					expanded = expanded,
@@ -266,7 +329,7 @@ fun Credentials(nameInput: MutableState<String?>, snackbarHostState: SnackbarHos
 						valid = sanitizeIP(content, state)
 					} else {
 						state.error = false
-						state.message = "NOTE: The server accepts only HTTP requests"
+						state.message = state.defaultMessage
 					}
 				},
 			)
@@ -275,7 +338,7 @@ fun Credentials(nameInput: MutableState<String?>, snackbarHostState: SnackbarHos
 			onClick = { 
 				scope.launch {
 					try {
-						val body: String = Connection().connect(state.text, dropdownProtocol)
+						val body: String = Connection().connect(state.text, dropdownProtocol, nameInput.value!!)
 						snackbarHostState.showSnackbar(message = "$body")
 					} catch (e: Exception) {
 						snackbarHostState.showSnackbar(message = "$e")
@@ -303,34 +366,35 @@ fun Field (
 	},
 	modifier: Modifier = Modifier
 ) {
-	TextField (
+	OutlinedTextField (
 		value = state.text,
 		onValueChange = { value -> state.text = value; validation(value, state) },
 		label = { Text(label) },
-		trailingIcon = { 
+		/*trailingIcon = { 
 			Image(
 				painter = painterResource(R.drawable.revolver),
 				contentDescription = null,
 				modifier = Modifier
 					.size(50.dp)
 			)
-		},
+		},*/
 		isError = state.error,
 		singleLine = true,
 		supportingText = {
 			Text(state.message)
 		},
-		modifier = modifier
+		modifier = modifier.padding(top = 0.dp)
 	)
 }
 class Connection() {
 	private val client = HttpClient()
-	suspend fun connect(address: String, urlProtocol: URLProtocol): String {
-		val response: HttpResponse = client.get{
+	suspend fun connect(address: String, urlProtocol: URLProtocol, name: String): String {
+		val response: HttpResponse = client.post{
 			url {
 				protocol = urlProtocol
 				host = "$address"
 				path("android")
+				setBody(name)
 			}
 		}
 		//println(response.status)
@@ -369,7 +433,30 @@ fun sanitizeIP(input: String, state: FieldState): Boolean {
 		state.message = "Not a valid IP address"
 	} else {
 		state.error = false
-		state.message = "NOTE: The server accepts only HTTP requests"
+		state.message = state.defaultMessage
 	}	
 	return valid
+}
+@Composable
+fun OrientationMatch(config: Configuration, modifier: Modifier = Modifier, composables: @Composable () -> Unit) {
+	when (config.orientation) {
+		Configuration.ORIENTATION_PORTRAIT -> { 
+			Column(
+				verticalArrangement = Arrangement.Center,
+				modifier = modifier
+			) {
+				composables
+				Text("portrait", modifier = Modifier.padding(top = 200.dp))
+			}
+		}
+		else -> { 
+			Row(
+				horizontalArrangement = Arrangement.Center,
+				modifier = modifier
+			) {
+				composables
+				Text("landscape", modifier = Modifier.padding(top = 200.dp))
+			}
+		}
+	}
 }
