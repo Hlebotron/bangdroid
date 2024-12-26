@@ -2,7 +2,7 @@ package com.sasha.kablam
 
 import android.content.res.Configuration
 import android.os.Bundle
-import android.view.inputmethod.InputConnection
+//import android.view.inputmethod.InputConnection
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -14,13 +14,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.input.*
+//import androidx.compose.ui.text.input.*
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.*
 import androidx.compose.ui.tooling.preview.Preview
 import io.ktor.client.*
-import io.ktor.client.request.* 
+/*import io.ktor.client.request.*
 //import io.ktor.client.response.*
 import io.ktor.client.statement.*
 //import io.ktor.client.statement.bodyAsText
@@ -30,26 +30,36 @@ import androidx.compose.animation.core.EaseInOut
 import androidx.compose.animation.core.TweenSpec
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.rememberInfiniteTransition*/
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
-import androidx.compose.runtime.LaunchedEffect
+//import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.saveable.Saver
+//import androidx.compose.runtime.saveable.Saver
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import com.sasha.myapplication.ui.theme.BaseTheme
-import io.ktor.client.statement.HttpResponse
+import io.ktor.client.plugins.websocket.WebSockets
+import io.ktor.client.plugins.websocket.receiveDeserialized
+import io.ktor.client.plugins.websocket.webSocket
+//import io.ktor.client.statement.HttpResponse
+import io.ktor.client.engine.cio.*
+import io.ktor.http.HttpMethod
 import io.ktor.http.URLProtocol
-import io.ktor.http.path
+import io.ktor.serialization.kotlinx.*
+import io.ktor.websocket.Frame
+import io.ktor.websocket.readText
+import kotlinx.coroutines.channels.consumeEach
+import kotlinx.serialization.json.*
+//import io.ktor.http.path
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -81,14 +91,14 @@ fun Content(modifier: Modifier = Modifier) {
 	val modifier = Modifier.padding(innerPadding)
 	val scope = rememberCoroutineScope()
 	var name = rememberSaveable { mutableStateOf<String?>(null) }
-	val innerModifier = Modifier//.align(Alignment.CenterHorizontally)
+	val masterModifier = Modifier//.align(Alignment.CenterHorizontally)
 	/*OrientationMatch(config = config) {
-		Title(innerModifier)
+		Title(masterModifier)
 		Column(modifier = modifier, verticalArrangement = Arrangement.Center) {
 			if (name.value != null) {
-				ServerInfo(name, snackbarHostState, modifier = innerModifier)
+				ServerInfo(name, snackbarHostState, modifier = masterModifier)
 			} else {
-				Registration(name, modifier = innerModifier)
+				Registration(name, modifier = masterModifier)
 			}
 		}
 	}*/
@@ -99,41 +109,39 @@ fun Content(modifier: Modifier = Modifier) {
 		animationSpec = infiniteRepeatable(TweenSpec(500, easing = EaseInOut)),
 		label = "spinningTransition"
 	)*/
-	if (config.orientation == Configuration.ORIENTATION_PORTRAIT) {
+	//var nameText = rememberSaveable { mutableStateOf("") }
+	//var addressText = rememberSaveable { mutableStateOf("") }
+	val portrait = config.orientation == Configuration.ORIENTATION_PORTRAIT
+	if (portrait) {
 		Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.Center) {
-		    //val innerModifier = Modifier.align(Alignment.CenterHorizontally)
-		    Title(innerModifier, true)
-		    Column(modifier = modifier.fillMaxWidth().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.Center) {
+		    Title(masterModifier.fillMaxWidth().align(Alignment.CenterHorizontally))
+		    /*Column(modifier = modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.Center) {
 			if (name.value != null) {
-				ServerInfo(name, snackbarHostState, modifier = innerModifier)
+				ServerInfo(name, snackbarHostState, modifier = masterModifier)
 			} else {
-				Registration(name, modifier = innerModifier)
+				Registration(name, modifier = masterModifier)
 			}
-		    }
+		    }*/
+		    Logins(name, snackbarHostState, masterModifier.fillMaxWidth())
 		}
 	} else {
 		Row(modifier = modifier.fillMaxHeight(), horizontalArrangement = Arrangement.Center) {
-		    //val innerModifier = Modifier.align(Alignment.CenterHorizontally)
-		    Title(innerModifier, false)
-		    Column(modifier = modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.Center) {
+		    Title(masterModifier.fillMaxHeight())
+		    /*Column(modifier = modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.Center) {
 			if (name.value != null) {
-				ServerInfo(name, snackbarHostState, modifier = innerModifier)
+				ServerInfo(name, snackbarHostState, modifier = masterModifier)
 			} else {
-				Registration(name, modifier = innerModifier)
+				Registration(name, modifier = masterModifier)
 			}
-		    }
+		    }*/
+		    Logins(name, snackbarHostState, masterModifier.fillMaxHeight())
 		}
 	}
     }
 }
 @Composable
-fun Title(modifier: Modifier = Modifier, portrait: Boolean = true) {
-	val mod = if (portrait) {
-		modifier.fillMaxWidth()
-	} else {
-		modifier.fillMaxHeight()
-	}
-	Column(modifier = mod) {
+fun Title(modifier: Modifier = Modifier) {
+	Column(modifier = modifier) {
 	    Image(
 		    painter = painterResource(R.drawable.revolver),
 		    contentDescription = null,
@@ -141,7 +149,7 @@ fun Title(modifier: Modifier = Modifier, portrait: Boolean = true) {
 	    )
 	    Text(
 		text = "KABLAM!",
-		modifier = modifier.paddingFromBaseline(bottom = 25.sp).align(Alignment.CenterHorizontally),
+		modifier = Modifier.paddingFromBaseline(bottom = 25.sp).align(Alignment.CenterHorizontally),
 		fontSize = 50.sp,
 		textAlign = TextAlign.Center
 	    )
@@ -149,11 +157,11 @@ fun Title(modifier: Modifier = Modifier, portrait: Boolean = true) {
 }
 @Composable
 fun Logins(name: MutableState<String?> = mutableStateOf(null), snackbarHostState: SnackbarHostState, modifier: Modifier = Modifier) {
-	    Column(modifier = modifier, verticalArrangement = Arrangement.Center) {
+	Column(modifier = modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.Center) {
 		if (name.value != null) {
-			ServerInfo(name, snackbarHostState, modifier = modifier)
+			ServerInfo(name, snackbarHostState, modifier = Modifier)
 		} else {
-			Registration(name, modifier = modifier)
+			Registration(name, modifier = Modifier)
 		}
 	    }
 }
@@ -165,16 +173,17 @@ fun ContentPreview() {
     	Content()
     }
 }
-class FieldState(var defaultMessage: String) {
+class FieldState(var defaultMessage: String = "", var defaultText: String = "") {
 	var error: Boolean by mutableStateOf(false)
-	var text: String by mutableStateOf("")
+	var text: String by mutableStateOf(defaultText)
 	var message: String by mutableStateOf(defaultMessage)
 }
+
 
 @Composable
 fun Registration(name: MutableState<String?>, modifier: Modifier = Modifier) {
 	Column(verticalArrangement = Arrangement.Center, modifier = modifier.fillMaxWidth()) {
-		var state = remember { FieldState("") }
+		var state = remember { FieldState() }
 		Text(text = "Please enter your name", modifier = modifier.align(Alignment.CenterHorizontally))
 		Field("Name", state = state, modifier = modifier.align(Alignment.CenterHorizontally))
 		Button(
@@ -184,6 +193,7 @@ fun Registration(name: MutableState<String?>, modifier: Modifier = Modifier) {
 			content = {
 				val content = when (state.text) {
 					"iPhone 7 Plus" -> "Men"
+					"Sans" -> "human.. i remember you're GENOCIDES"
 					else -> "Proceed"
 				}
 				Text(content)
@@ -193,12 +203,12 @@ fun Registration(name: MutableState<String?>, modifier: Modifier = Modifier) {
 		)
 	}
 }
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ServerInfo(nameInput: MutableState<String?>, snackbarHostState: SnackbarHostState, modifier: Modifier = Modifier) {
 	val name = nameInput.value
 	Column(verticalArrangement = Arrangement.Center, modifier = modifier.fillMaxWidth()) {
-		var state: FieldState = remember { FieldState("") }
+		var state: FieldState = remember { FieldState(defaultText = "192.168.1.170:6969") }
+		state.text = "192.168.1.170:6969"
 		val scope = rememberCoroutineScope()
 		var dropdownProtocol by remember { mutableStateOf(URLProtocol.HTTP) }
 		Text(
@@ -338,8 +348,7 @@ fun ServerInfo(nameInput: MutableState<String?>, snackbarHostState: SnackbarHost
 			onClick = { 
 				scope.launch {
 					try {
-						val body: String = Connection().connect(state.text, dropdownProtocol, nameInput.value!!)
-						snackbarHostState.showSnackbar(message = "$body")
+						val body: String = Connection().connect(state.text, dropdownProtocol, nameInput.value!!, snackbarHostState)
 					} catch (e: Exception) {
 						snackbarHostState.showSnackbar(message = "$e")
 					}
@@ -354,7 +363,7 @@ fun ServerInfo(nameInput: MutableState<String?>, snackbarHostState: SnackbarHost
 @Composable
 fun Field (
 	label: String, 
-	state: FieldState = remember { FieldState("") }, 
+	state: FieldState = remember { FieldState() }, 
 	validation: (String, FieldState) -> Unit = { content, state ->
 			if (content == null) {
 				state.error = true
@@ -366,9 +375,16 @@ fun Field (
 	},
 	modifier: Modifier = Modifier
 ) {
+	var textFieldContent = rememberSaveable { mutableStateOf<String>(state.defaultText) }
+	validation(textFieldContent.value, state)
+	state.text = textFieldContent.value
 	OutlinedTextField (
-		value = state.text,
-		onValueChange = { value -> state.text = value; validation(value, state) },
+		value = textFieldContent.value,
+		onValueChange = { value -> 
+			textFieldContent.value = value
+			state.text = value 
+			validation(value, state) 
+		},
 		label = { Text(label) },
 		/*trailingIcon = { 
 			Image(
@@ -387,9 +403,45 @@ fun Field (
 	)
 }
 class Connection() {
-	private val client = HttpClient()
-	suspend fun connect(address: String, urlProtocol: URLProtocol, name: String): String {
-		val response: HttpResponse = client.post{
+	private val client = HttpClient(CIO) {
+		install(WebSockets) {
+				contentConverter = KotlinxWebsocketSerializationConverter(Json)	
+				pingIntervalMillis = 1000
+		}
+		engine {
+			/*connectTimeout = 5000
+        		socketTimeout = 5000*/
+		}
+	}
+	suspend fun connect(addressInput: String, urlProtocol: URLProtocol, name: String, snackbarHostState: SnackbarHostState): String {
+		val address = addressInput.split(":")
+		val host = address[0]
+		val port = address[1].toInt()
+		var result = "Unknown"
+		val response = client.webSocket(method = HttpMethod.Get, host = host, port = port, path = "/android") {
+			send(Frame.Text("hello from client"))
+			println("test")
+			incoming.consumeEach { frame ->
+				result = "Unknown"
+				when (frame) {
+					is Frame.Text -> {
+						val frameText = (frame as Frame.Text).readText()
+						//snackbarHostState.showSnackbar(message = frameText)
+						result = frameText
+					}
+					is Frame.Close -> {
+						//snackbarHostState.showSnackbar(message = "Websocket closed")
+						result = "Closed"
+						println("closed")
+						//return@loop
+					}
+					else -> snackbarHostState.showSnackbar(message = "Unknown message")
+				}
+				println("frame")
+				snackbarHostState.showSnackbar(message = result)
+			}
+		}
+		/*client.post{
 			url {
 				protocol = urlProtocol
 				host = "$address"
@@ -397,8 +449,8 @@ class Connection() {
 				setBody(name)
 			}
 		}
-		//println(response.status)
-		return response.bodyAsText()
+		//println(response.status)*/
+		return result
 	}
 }
 
@@ -438,14 +490,14 @@ fun sanitizeIP(input: String, state: FieldState): Boolean {
 	return valid
 }
 @Composable
-fun OrientationMatch(config: Configuration, modifier: Modifier = Modifier, composables: @Composable () -> Unit) {
+inline fun OrientationMatch(config: Configuration, modifier: Modifier = Modifier, composables: @Composable () -> Unit): Unit {
 	when (config.orientation) {
 		Configuration.ORIENTATION_PORTRAIT -> { 
 			Column(
 				verticalArrangement = Arrangement.Center,
 				modifier = modifier
 			) {
-				composables
+				//composables
 				Text("portrait", modifier = Modifier.padding(top = 200.dp))
 			}
 		}
@@ -454,9 +506,10 @@ fun OrientationMatch(config: Configuration, modifier: Modifier = Modifier, compo
 				horizontalArrangement = Arrangement.Center,
 				modifier = modifier
 			) {
-				composables
+				//composables
 				Text("landscape", modifier = Modifier.padding(top = 200.dp))
 			}
 		}
 	}
 }
+

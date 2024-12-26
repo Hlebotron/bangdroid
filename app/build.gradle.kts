@@ -60,8 +60,9 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
     implementation("androidx.compose.material:material-icons-extended")
-    implementation("io.ktor:ktor-client-android:3.0.0")
+    implementation("io.ktor:ktor-client-cio:3.0.0")
     implementation(libs.androidx.monitor)
+    implementation("io.ktor:ktor-serialization-kotlinx-json:3.0.0")
     //implementation("io.ktor:ktor-client-core")
     //implementation("io.ktor:ktor-client-cio")
 
